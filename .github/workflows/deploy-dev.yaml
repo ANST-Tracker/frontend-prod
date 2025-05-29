@@ -6,7 +6,6 @@ on:
       - 'dev'
 
 jobs:
-
   build-push-image:
     runs-on: ubuntu-latest
     steps:
@@ -44,4 +43,3 @@ jobs:
             docker-compose up -d
             exit
           EOT
-
