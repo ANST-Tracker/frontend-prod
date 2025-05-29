@@ -1,0 +1,47 @@
+name: deploy-dev
+
+on:
+  workflow_dispatch:
+    branches:
+      - 'dev'
+
+jobs:
+
+  build-push-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: allokanic/greend:latest
+
+  run-on-cloud:
+    runs-on: ubuntu-latest
+    needs: build-push-image
+    steps:
+      - name: pull and rerun image
+        run: |
+          eval `ssh-agent -s`
+          ssh-add - <<< "${{ secrets.SSH_KEY_DEV }}"
+          ssh -o StrictHostKeyChecking=no -tt root@${{ secrets.HOST_IP_DEV }} << EOT
+            cd deploy
+            docker-compose pull
+            docker-compose up -d
+            exit
+          EOT
+
